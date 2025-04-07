@@ -11,15 +11,15 @@ funds = {
     "Allianz Strategy Select 75": {"return": 0.06, "guarantee": 0.85},
 }
 
-# Load Allianz logo SVG
-allianz_logo_svg = """
-<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-    <!-- Your Allianz logo SVG content here -->
-</svg>
-"""
+# URL to the raw SVG file in your GitHub repository
+logo_url = "https://raw.githubusercontent.com/your-username/repository-name/branch-name/allianz_logo.svg"
 
-# Display Allianz logo
-st.image(StringIO(allianz_logo_svg), format="svg")
+# Fetch and display the Allianz logo
+response = requests.get(logo_url)
+if response.status_code == 200:
+    st.image(response.content, format="svg")
+else:
+    st.error("Failed to load the Allianz logo.")
 
 # Header section
 st.title("Allianz VitaVerde - Interactive Simulator")
