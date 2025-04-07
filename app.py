@@ -12,7 +12,7 @@ funds = {
 }
 
 # URL to the raw SVG file in your GitHub repository
-logo_url = "https://raw.githubusercontent.com/your-username/repository-name/branch-name/allianz_logo.svg"
+logo_url = "https://github.com/softdatahardtruth/prototyp_unit_linked/blob/main/allianz-logo.svg"
 
 # Fetch the Allianz logo
 response = requests.get(logo_url)
