@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-from io import StringIO
+import requests  # Ensure this import is present
 
 # Dummy fund data (Active4Life)
 funds = {
