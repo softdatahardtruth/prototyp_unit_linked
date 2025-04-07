@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
-import requests  # Ensure this import is present
+import requests
 
 # Dummy fund data (Active4Life)
 funds = {
@@ -12,12 +12,14 @@ funds = {
 }
 
 # URL to the raw SVG file in your GitHub repository
-logo_url = "https://github.com/softdatahardtruth/prototyp_unit_linked/blob/main/allianz-logo.svg"
+logo_url = "https://raw.githubusercontent.com/your-username/repository-name/branch-name/allianz_logo.svg"
 
-# Fetch and display the Allianz logo
+# Fetch the Allianz logo
 response = requests.get(logo_url)
 if response.status_code == 200:
-    st.image(response.content, format="svg")
+    svg_content = response.text
+    # Display SVG using HTML rendering
+    st.markdown(f'<div>{svg_content}</div>', unsafe_allow_html=True)
 else:
     st.error("Failed to load the Allianz logo.")
 
