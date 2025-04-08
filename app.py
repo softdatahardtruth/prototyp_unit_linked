@@ -10,7 +10,7 @@ from datetime import datetime
 import tempfile
 
 # URL zu Ihrem TrueType-Font auf GitHub
-font_url = "https://github.com/softdatahardtruth/prototyp_unit_linked/raw/main/DejaVuSans.ttf"
+font_url = "https://github.com/softdatahardtruth/prototyp_unit_linked/blob/main/DejaVuSans.ttf"
 
 # Temporären Speicherort für den Font
 ttf_font_path = "/tmp/DejaVuSans.ttf"
