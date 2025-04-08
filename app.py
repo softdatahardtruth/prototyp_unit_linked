@@ -198,14 +198,14 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
 
             result_summary.append({
                 "Scenario": scenario,
-                "Paid-in Capital (€)": paid_in,
-                "Final Capital (€)": final_capital,
-                "Earnings (€)": gross_earnings,
-                "Tax (€)": tax,
-                "Setup Cost (€)": setup_cost_total,
-                "After Tax (€)": after_tax,
-                "Death Benefit (€)": death_benefit,
-                "Guaranteed Payout (€)": guaranteed_payout
+                "Paid-in Capital (EUR)": paid_in,
+                "Final Capital (EUR)": final_capital,
+                "Earnings (EUR)": gross_earnings,
+                "Tax (EUR)": tax,
+                "Setup Cost (EUR)": setup_cost_total,
+                "After Tax (EUR)": after_tax,
+                "Death Benefit (EUR)": death_benefit,
+                "Guaranteed Payout (EUR)": guaranteed_payout
             })
 
         summary_df = pd.DataFrame(result_summary)
@@ -213,7 +213,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         # Helper function for safe formatting
         def safe_format(value):
             if isinstance(value, (int, float, np.number)) and pd.notnull(value):
-                return "€{:,.2f}".format(value)
+                return "EUR{:,.2f}".format(value)
             else:
                 return "n/a"
 
@@ -229,8 +229,8 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         # === Bar Chart Comparison ===
         st.markdown("### Scenario Comparison: Guaranteed Payout")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
-        ax2.bar(summary_df["Scenario"], summary_df["Guaranteed Payout (€)"], color=['green', 'blue', 'red'])
-        ax2.set_ylabel("Guaranteed Payout (€)")
+        ax2.bar(summary_df["Scenario"], summary_df["Guaranteed Payout (EUR)"], color=['green', 'blue', 'red'])
+        ax2.set_ylabel("Guaranteed Payout (EUR)")
         ax2.set_title("Scenario Comparison")
         st.pyplot(fig2)
 
@@ -246,7 +246,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             ax3.plot(range(months), capital, label=scenario)
 
         ax3.set_xlabel("Months")
-        ax3.set_ylabel("Capital (€)")
+        ax3.set_ylabel("Capital (EUR)")
         ax3.set_title("Growth Over Time")
         ax3.legend()
         st.pyplot(fig3)
@@ -324,9 +324,9 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         pdf.multi_cell(
             0, 8,
             f"{row['Scenario']}: "
-            f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
-            f"After Tax: {safe_format(row['After Tax (€)'])} | "
-            f"Guaranteed Payout: {safe_format(row['Guaranteed Payout (€)'])}"
+            f"Paid-in: {safe_format(row['Paid-in Capital (EUR)'])} | "
+            f"After Tax: {safe_format(row['After Tax (EUR)'])} | "
+            f"Guaranteed Payout: {safe_format(row['Guaranteed Payout (EUR)'])}"
         )
 
     # Footer
