@@ -1,124 +1,141 @@
 import streamlit as st
+import yfinance as yf
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
+from io import BytesIO
+import base64
+from fpdf import FPDF
 import requests
 
-# === LOGO-FIX ===
+# Logo laden
 logo_url = "https://raw.githubusercontent.com/softdatahardtruth/prototyp_unit_linked/main/allianz-logo.svg"
 response = requests.get(logo_url)
 if response.status_code == 200:
     svg_content = response.text
     st.markdown(f'<div style="text-align: center;">{svg_content}</div>', unsafe_allow_html=True)
-else:
-    st.error("Failed to load the Allianz logo.")
 
-# === STYLING ===
-st.title("Allianz VitaVerde - Interaktiver Simulator")
-st.subheader("Erkunde die Entwicklung deiner fondsgebundenen Lebensversicherung")
+# Title
+st.title("Allianz VitaVerde - Live Fund Simulator")
+st.subheader("Real-time Data, Scenario Analysis, and Tax Simulation")
 st.markdown("---")
 
-# === FONDSDATEN ===
+# Fund selection with real tickers
 funds = {
-    "Allianz Strategy Select 30": {"return": 0.03, "volatility": 0.01, "guarantee": 0.93},
-    "Allianz Strategy 4Life Europe 40": {"return": 0.04, "volatility": 0.015, "guarantee": 0.92},
-    "Allianz Strategy Select 50": {"return": 0.05, "volatility": 0.02, "guarantee": 0.90},
-    "Allianz Strategy Select 75": {"return": 0.06, "volatility": 0.03, "guarantee": 0.85},
+    "Allianz Strategy Select 30 (Eur)": {"ticker": "0P0000Q8MA.IR", "type": "Mixed"},
+    "Allianz Strategy Select 50 (Eur)": {"ticker": "0P0000Q8MB.IR", "type": "Mixed"},
+    "Allianz Strategy Select 75 (Eur)": {"ticker": "0P0000Q8MC.IR", "type": "Equity"},
+    "iShares Euro Govt Bond 15-30yr": {"ticker": "IBGL.DE", "type": "Bond"},
+    "MSCI World ETF": {"ticker": "URTH", "type": "Equity"},
 }
 
-# === USER INPUTS ===
-selected_funds = st.multiselect("Wähle bis zu fünf Fonds", list(funds.keys()), max_selections=5)
-contribution = st.number_input("Monatlicher Beitrag (€)", min_value=10, value=100, step=10)
-duration = st.number_input("Laufzeit (Jahre)", min_value=1, max_value=40, value=20, step=1)
+selected_funds = st.multiselect("Select your funds (up to 5)", list(funds.keys()), max_selections=5)
+contribution = st.number_input("Monthly Contribution (€)", min_value=10, value=100, step=10)
+duration = st.number_input("Investment Horizon (Years)", min_value=1, max_value=40, value=20, step=1)
 
 allocations = {}
 total_allocation = 0
 
 if selected_funds:
-    st.markdown("#### Verteile deine Einzahlung auf die Fonds:")
+    st.markdown("#### Allocate your contributions among the selected funds:")
     for fund in selected_funds:
-        allocation = st.number_input(f"Allocation für {fund} (%)", min_value=0, max_value=100, value=0, step=1)
+        allocation = st.number_input(f"Allocation for {fund} (%)", min_value=0, max_value=100, value=0, step=1)
         allocations[fund] = allocation
         total_allocation += allocation
 
-# === PRÜFUNG ALLOKATION ===
+# === VALIDATION ===
 if total_allocation > 100:
-    st.error("Die Gesamtallokation überschreitet 100%. Bitte passe die Verteilung an.")
+    st.error("The total allocation exceeds 100%. Please adjust your distribution.")
 elif total_allocation < 100 and selected_funds:
-    st.warning("Die Gesamtallokation beträgt weniger als 100%. Bitte passe die Verteilung an.")
+    st.warning("The total allocation is less than 100%. Please adjust your distribution.")
 
-# === SIMULATION ===
-if st.button("Simulation starten") and total_allocation == 100:
+# === RUN SIMULATION ===
+if st.button("Run Simulation") and total_allocation == 100:
+    st.markdown("### Fetching historical data...")
+
+    # Fetch data
+    fund_data = {}
+    for fund in selected_funds:
+        ticker = funds[fund]["ticker"]
+        data = yf.download(ticker, period="5y", interval="1mo")
+        data = data.dropna()
+        fund_data[fund] = data
+
+    # Prepare simulation
     months = duration * 12
+    initial_month = list(fund_data.values())[0].index[0]
+
+    simulation_results = {
+        "Optimistic": [],
+        "Expected": [],
+        "Pessimistic": [],
+    }
+
     paid_in = contribution * months
 
-    capital_development = {fund: [] for fund in selected_funds}
-    total_capital = []
+    # Run scenarios
+    for scenario in simulation_results.keys():
+        total_capital = np.zeros(months)
 
-    # Initialisieren Fonds-Kapital
-    fund_capitals = {fund: 0 for fund in selected_funds}
-
-    # Simulation über die Monate
-    for month in range(months):
-        monthly_contributions = {fund: contribution * allocations[fund] / 100 for fund in selected_funds}
-        
-        month_total = 0
         for fund in selected_funds:
-            data = funds[fund]
-            expected_return = data["return"] / 12
-            volatility = data["volatility"]
+            allocation_pct = allocations[fund] / 100
+            data = fund_data[fund]
+            returns = data['Adj Close'].pct_change().fillna(0).values
 
-            # Simulierter monatlicher zufälliger Return
-            random_shock = np.random.normal(loc=expected_return, scale=volatility)
+            # Scenario adjustment
+            volatility = np.std(returns)
+            mean_return = np.mean(returns)
 
-            # Kapitalentwicklung berechnen
-            fund_capitals[fund] *= (1 + random_shock)
-            fund_capitals[fund] += monthly_contributions[fund]
-            capital_development[fund].append(fund_capitals[fund])
+            if scenario == "Optimistic":
+                returns = returns + volatility
+            elif scenario == "Pessimistic":
+                returns = returns - volatility
 
-            month_total += fund_capitals[fund]
+            fund_capital = 0
+            fund_capitals = []
 
-        total_capital.append(month_total)
+            for month in range(months):
+                monthly_contribution = contribution * allocation_pct
+                fund_capital *= (1 + returns[min(month, len(returns)-1)])
+                fund_capital += monthly_contribution
+                fund_capitals.append(fund_capital)
 
-    final_capital = total_capital[-1]
-    earnings = max(0, final_capital - paid_in)
-    tax = earnings * 0.26
-    after_tax = final_capital - tax
+                total_capital[month] += fund_capital
 
-    # === ERGEBNISDARSTELLUNG ===
-    st.markdown("### Ergebnisse")
-    st.write(f"**Eingezahltes Kapital:** {paid_in:,.2f} €")
-    st.write(f"**Kapital vor Steuern:** {final_capital:,.2f} €")
-    st.write(f"**Kapital nach Steuern:** {after_tax:,.2f} €")
-    st.markdown("---")
+        simulation_results[scenario] = total_capital
 
-    # === GRAFIK ===
-    st.markdown("### Entwicklung über die Zeit")
+    # Display results
+    st.markdown("### Simulation Results")
+
+    for scenario, capital in simulation_results.items():
+        final = capital[-1]
+        earnings = max(0, final - paid_in)
+
+        # Tax calculation based on fund types
+        tax_rate = 0.26
+        if all(funds[fund]["type"] == "Bond" for fund in selected_funds):
+            tax_rate = 0.125  # Favorable tax for bonds
+
+        tax = earnings * tax_rate
+        after_tax = final - tax
+
+        st.write(f"**{scenario} Scenario:**")
+        st.write(f" - Final Capital before Tax: {final:,.2f} €")
+        st.write(f" - After Tax: {after_tax:,.2f} €")
+
+    # Plot
+    st.markdown("### Capital Development over Time")
     fig, ax = plt.subplots()
-    for fund in selected_funds:
-        ax.plot(range(months), capital_development[fund], label=fund)
-    ax.plot(range(months), total_capital, label="Gesamt", linewidth=2, linestyle='--', color='black')
-    ax.set_xlabel("Monate")
-    ax.set_ylabel("Kapital (€)")
-    ax.set_title("Kapitalentwicklung")
+
+    for scenario, capital in simulation_results.items():
+        ax.plot(range(months), capital, label=scenario)
+
+    ax.set_xlabel("Months")
+    ax.set_ylabel("Capital (€)")
+    ax.set_title("Simulation Scenarios")
     ax.legend()
+
     st.pyplot(fig)
 
-    # === EXPORT ===
-    st.markdown("### Exportiere deine Simulation")
-
-    # DataFrame vorbereiten
-    df = pd.DataFrame({fund: capital_development[fund] for fund in selected_funds})
-    df["Gesamt"] = total_capital
-    df.index.name = "Monat"
-
-    # Download Button
-    st.download_button(
-        label="Ergebnisse als Excel herunterladen",
-        data=df.to_excel(index=True, engine='openpyxl'),
-        file_name="simulationsergebnisse.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-
 else:
-    st.info("Bitte gib die Parameter ein und starte die Simulation.")
+    st.info("Please enter your parameters and run the simulation.")
