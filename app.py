@@ -130,56 +130,44 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     if all(data.empty for data in fund_data.values()):
         st.error("No historical data found for the selected funds.")
     else:
-        simulation_results_with = {"Optimistic": [], "Expected": [], "Pessimistic": []}
-        simulation_results_without = {"Optimistic": [], "Expected": [], "Pessimistic": []}
+        simulation_results = {"Optimistic": [], "Expected": [], "Pessimistic": []}
 
-        def run_simulation(apply_insurance_cost):
-            results = {}
-            for scenario in ["Optimistic", "Expected", "Pessimistic"]:
-                total_capital = np.zeros(months)
+        def run_simulation(expected_annual_return):
+            total_capital = np.zeros(months)
+            for fund in selected_funds:
+                allocation_pct = allocations[fund] / 100
+                data = fund_data[fund]
 
-                for fund in selected_funds:
-                    allocation_pct = allocations[fund] / 100
-                    data = fund_data[fund]
+                if data.empty or allocation_pct == 0:
+                    continue
 
-                    if data.empty or allocation_pct == 0:
-                        continue
+                price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
+                monthly_return = expected_annual_return / 12
+                fund_capital = 0
+                for month in range(months):
+                    monthly_contribution = contribution * allocation_pct
+                    fund_capital *= (1 + monthly_return)
+                    fund_capital += monthly_contribution
+                    total_capital[month] += fund_capital
 
-                    price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
-                    returns = data[price_column].pct_change().fillna(0).values
-                    volatility = np.std(returns)
+            return total_capital
 
-                    if scenario == "Optimistic":
-                        returns = returns + volatility
-                    elif scenario == "Pessimistic":
-                        returns = returns - volatility
+        # Beispiel für erwartete jährliche Renditen
+        expected_annual_returns = {"Optimistic": 0.08, "Expected": 0.05, "Pessimistic": 0.02}
 
-                    fund_capital = 0
-                    for month in range(months):
-                        monthly_contribution = contribution * allocation_pct
-                        fund_capital *= (1 + returns[min(month, len(returns) - 1)])
-                        if apply_insurance_cost:
-                            fund_capital *= (1 - insurance_cost_rate / 12)
-                        fund_capital += monthly_contribution
-                        total_capital[month] += fund_capital
+        for scenario in expected_annual_returns.keys():
+            simulation_results[scenario] = run_simulation(expected_annual_returns[scenario])
 
-                results[scenario] = total_capital
-            return results
+        result_summary = []
 
-        simulation_results_with = run_simulation(apply_insurance_cost=True)
-        simulation_results_without = run_simulation(apply_insurance_cost=False)
-
-        result_summary_with = []
-        result_summary_without = []
-
-        for scenario, capital in simulation_results_with.items():
+        for scenario, capital in simulation_results.items():
             final_capital = capital[-1]
             gross_earnings = max(0, final_capital - paid_in)
             tax = gross_earnings * 0.26
             after_tax = final_capital - tax - setup_cost_total
             death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
 
-            result_summary_with.append({
+            result_summary.append({
                 "Scenario": scenario,
                 "Paid-in Capital (€)": paid_in,
                 "Final Capital (€)": final_capital,
@@ -190,23 +178,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 "Death Benefit (€)": death_benefit
             })
 
-        for scenario, capital in simulation_results_without.items():
-            final_capital = capital[-1]
-            gross_earnings = max(0, final_capital - paid_in)
-            tax = gross_earnings * 0.26
-            after_tax = final_capital - tax
-
-            result_summary_without.append({
-                "Scenario": scenario,
-                "Paid-in Capital (€)": paid_in,
-                "Final Capital (€)": final_capital,
-                "Earnings (€)": gross_earnings,
-                "Tax (€)": tax,
-                "After Tax (€)": after_tax
-            })
-
-        summary_df_with = pd.DataFrame(result_summary_with)
-        summary_df_without = pd.DataFrame(result_summary_without)
+        summary_df = pd.DataFrame(result_summary)
 
         # Helper function for safe formatting
         def safe_format(value):
@@ -216,29 +188,20 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 return "n/a"
 
         # Formatieren Sie die DataFrame vor der Anzeige
-        summary_df_with_formatted = summary_df_with.copy()
-        for col in summary_df_with_formatted.columns:
-            if summary_df_with_formatted[col].dtype in [np.float64, np.int64]:
-                summary_df_with_formatted[col] = summary_df_with_formatted[col].apply(safe_format)
+        summary_df_formatted = summary_df.copy()
+        for col in summary_df_formatted.columns:
+            if summary_df_formatted[col].dtype in [np.float64, np.int64]:
+                summary_df_formatted[col] = summary_df_formatted[col].apply(safe_format)
 
-        st.markdown("### With Insurance Wrapper")
-        st.dataframe(summary_df_with_formatted)
+        st.markdown("### Simulation Results")
+        st.dataframe(summary_df_formatted)
 
-        # Wiederholen Sie den Vorgang für summary_df_without
-        summary_df_without_formatted = summary_df_without.copy()
-        for col in summary_df_without_formatted.columns:
-            if summary_df_without_formatted[col].dtype in [np.float64, np.int64]:
-                summary_df_without_formatted[col] = summary_df_without_formatted[col].apply(safe_format)
-
-        st.markdown("### Without Insurance Wrapper")
-        st.dataframe(summary_df_without_formatted)
-        
         # === Bar Chart Comparison ===
         st.markdown("### Scenario Comparison: After Tax & Death Benefit")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
-        ax2.bar(summary_df_with["Scenario"], summary_df_with["Death Benefit (€)"], color=['green', 'blue', 'red'])
+        ax2.bar(summary_df["Scenario"], summary_df["Death Benefit (€)"], color=['green', 'blue', 'red'])
         ax2.set_ylabel("Net Outcome (€)")
-        ax2.set_title("With Insurance - Scenario Comparison")
+        ax2.set_title("Scenario Comparison")
         st.pyplot(fig2)
 
         # Save chart to buffer for PDF
@@ -247,9 +210,9 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         buffer_chart.seek(0)
 
         # === Capital Development Over Time ===
-        st.markdown("### Capital Development Over Time (With Insurance)")
+        st.markdown("### Capital Development Over Time")
         fig3, ax3 = plt.subplots(figsize=(6, 4))
-        for scenario, capital in simulation_results_with.items():
+        for scenario, capital in simulation_results.items():
             ax3.plot(range(months), capital, label=scenario)
 
         ax3.set_xlabel("Months")
@@ -264,15 +227,12 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         buffer_pie.seek(0)
 
         # === Excel Export ===
-        df_with = pd.DataFrame(simulation_results_with)
-        df_without = pd.DataFrame(simulation_results_without)
+        df_results = pd.DataFrame(simulation_results)
 
         excel_buffer = BytesIO()
         with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-            df_with.to_excel(writer, sheet_name="With Insurance")
-            df_without.to_excel(writer, sheet_name="Without Insurance")
-            summary_df_with.to_excel(writer, sheet_name="Summary With", index=False)
-            summary_df_without.to_excel(writer, sheet_name="Summary Without", index=False)
+            df_results.to_excel(writer, sheet_name="Simulation Results")
+            summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
         excel_buffer.seek(0)
 
@@ -323,33 +283,19 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         tmpfile.write(buffer_chart.getvalue())
         pdf.image(tmpfile.name, w=150)
 
-    # Summary with insurance
+    # Summary
     pdf.ln(10)
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Summary With Insurance", ln=True)
+    pdf.cell(0, 10, "Simulation Summary", ln=True)
     pdf.set_font("Arial", "", 10)
 
-    for idx, row in summary_df_with.iterrows():
+    for idx, row in summary_df.iterrows():
         pdf.multi_cell(
             0, 8,
             f"{row['Scenario']}: "
             f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
             f"After Tax: {safe_format(row['After Tax (€)'])} | "
             f"Death Benefit: {safe_format(row['Death Benefit (€)'])}"
-        )
-
-    # Summary without insurance
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Summary Without Insurance", ln=True)
-    pdf.set_font("Arial", "", 10)
-
-    for idx, row in summary_df_without.iterrows():
-        pdf.multi_cell(
-            0, 8,
-            f"{row['Scenario']}: "
-            f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
-            f"After Tax: {safe_format(row['After Tax (€)'])}"
         )
 
     # Footer
