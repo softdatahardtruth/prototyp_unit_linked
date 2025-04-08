@@ -4,9 +4,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
-import base64
-from fpdf import FPDF
 import requests
+
+# === CONFIG ===
+st.set_page_config(page_title="Allianz VitaVerde Simulator", layout="wide")
 
 # === LOGO ===
 logo_url = "https://raw.githubusercontent.com/softdatahardtruth/prototyp_unit_linked/main/allianz-logo.svg"
@@ -16,36 +17,36 @@ if response.status_code == 200:
     st.markdown(f'<div style="text-align: center;">{svg_content}</div>', unsafe_allow_html=True)
 
 # === TITLE ===
-st.title("Allianz VitaVerde - Live Fund Simulator")
-st.subheader("Real-time Data, Scenario Analysis, and Tax Simulation")
+st.title("Allianz VitaVerde - Interactive Fund Simulator")
+st.subheader("Real-time Data, Scenario Analysis, Tax Overview, and Allocation Insights")
 st.markdown("---")
 
-# === FUND DATA (Optimized, Public Tickers) ===
+# === FUND DATA (Stable public tickers + descriptions) ===
 funds = {
     "iShares MSCI World ETF": {
         "ticker": "URTH",
         "type": "Equity",
-        "description": "Global developed markets equity exposure"
+        "description": "Global developed markets equity exposure."
     },
     "SPDR S&P 500 ETF Trust": {
         "ticker": "SPY",
         "type": "Equity",
-        "description": "Large-cap US equity exposure"
+        "description": "Large-cap US equity exposure."
     },
-    "iShares Euro Govt Bond 15-30yr": {
-        "ticker": "IBGL.DE",
+    "iShares Euro Govt Bond 10-25yr UCITS ETF": {
+        "ticker": "IEGA.DE",
         "type": "Bond",
-        "description": "Eurozone government bonds with 15-30 years maturity"
+        "description": "Eurozone government bonds with 10-25 years maturity."
     },
     "Vanguard FTSE All-World UCITS ETF": {
         "ticker": "VWRD.L",
         "type": "Equity",
-        "description": "Global diversified equity exposure"
+        "description": "Global diversified equity exposure."
     },
     "Xtrackers MSCI Emerging Markets UCITS ETF": {
         "ticker": "XMME.DE",
         "type": "Equity",
-        "description": "Emerging markets equity exposure"
+        "description": "Emerging markets equity exposure."
     },
 }
 
@@ -58,15 +59,15 @@ allocations = {}
 total_allocation = 0
 
 if selected_funds:
-    # Show fund descriptions
-    st.markdown("### Fund Details:")
-    for fund in selected_funds:
-        details = funds[fund]
-        st.markdown(f"**{fund}**")
-        st.markdown(f"- Ticker: {details['ticker']}")
-        st.markdown(f"- Type: {details['type']}")
-        st.markdown(f"- Description: {details['description']}")
-        st.markdown("---")
+    # Elegant fund details display in expander
+    with st.expander("Fund Details", expanded=True):
+        for fund in selected_funds:
+            details = funds[fund]
+            st.markdown(f"**{fund}**")
+            st.markdown(f"- **Ticker:** {details['ticker']}")
+            st.markdown(f"- **Type:** {details['type']}")
+            st.markdown(f"- **Description:** {details['description']}")
+            st.markdown("---")
 
     st.markdown("#### Allocate your contributions among the selected funds:")
     for fund in selected_funds:
@@ -87,7 +88,7 @@ if selected_funds:
 
         fig1, ax1 = plt.subplots()
         ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        ax1.axis('equal')
         st.pyplot(fig1)
 
 # === VALIDATION ===
@@ -129,12 +130,10 @@ if st.button("Run Simulation") and total_allocation == 100:
                 allocation_pct = allocations[fund] / 100
                 data = fund_data[fund]
 
-                # Skip empty data
                 if data.empty:
                     st.warning(f"No data found for {fund}. Skipping this fund.")
                     continue
 
-                # Check for price column
                 price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
                 if price_column not in data.columns:
                     st.warning(f"No price data for {fund}. Skipping this fund.")
@@ -148,33 +147,28 @@ if st.button("Run Simulation") and total_allocation == 100:
                 volatility = np.std(returns)
                 mean_return = np.mean(returns)
 
-                # Scenario adjustment
                 if scenario == "Optimistic":
                     returns = returns + volatility
                 elif scenario == "Pessimistic":
                     returns = returns - volatility
 
                 fund_capital = 0
-                fund_capitals = []
-
                 for month in range(months):
                     monthly_contribution = contribution * allocation_pct
                     fund_capital *= (1 + returns[min(month, len(returns) - 1)])
                     fund_capital += monthly_contribution
-                    fund_capitals.append(fund_capital)
-
                     total_capital[month] += fund_capital
 
             simulation_results[scenario] = total_capital
 
-        # === RESULTS ===
+        # === RESULTS OVERVIEW ===
         st.markdown("### Simulation Results")
 
+        result_summary = []
         for scenario, capital in simulation_results.items():
             final = capital[-1]
             earnings = max(0, final - paid_in)
 
-            # Determine tax rate
             if all(funds[fund]["type"] == "Bond" for fund in selected_funds):
                 tax_rate = 0.125
             else:
@@ -183,35 +177,47 @@ if st.button("Run Simulation") and total_allocation == 100:
             tax = earnings * tax_rate
             after_tax = final - tax
 
+            result_summary.append({"Scenario": scenario, "Final Capital (€)": final, "Tax (€)": tax, "After Tax (€)": after_tax})
+
             st.write(f"**{scenario} Scenario:**")
             st.write(f" - Final Capital before Tax: {final:,.2f} €")
-            st.write(f" - After Tax: {after_tax:,.2f} €")
+            st.write(f" - Tax: {tax:,.2f} €")
+            st.write(f" - Final Capital after Tax: {after_tax:,.2f} €")
 
-        # === CHART ===
+        # Summary DataFrame for export and plots
+        summary_df = pd.DataFrame(result_summary)
+
+        # === BAR CHART: Scenario Comparison ===
+        st.markdown("### Scenario Comparison")
+        fig2, ax2 = plt.subplots()
+        ax2.bar(summary_df["Scenario"], summary_df["After Tax (€)"], color=['green', 'blue', 'red'])
+        ax2.set_ylabel("After Tax Capital (€)")
+        ax2.set_title("Scenario Comparison: After Tax Results")
+        st.pyplot(fig2)
+
+        # === CAPITAL DEVELOPMENT CHART ===
         st.markdown("### Capital Development Over Time")
-        fig, ax = plt.subplots()
+        fig3, ax3 = plt.subplots()
 
         for scenario, capital in simulation_results.items():
-            ax.plot(range(months), capital, label=scenario)
+            ax3.plot(range(months), capital, label=scenario)
 
-        ax.set_xlabel("Months")
-        ax.set_ylabel("Capital (€)")
-        ax.set_title("Simulation Scenarios")
-        ax.legend()
+        ax3.set_xlabel("Months")
+        ax3.set_ylabel("Capital (€)")
+        ax3.set_title("Simulation Scenarios Over Time")
+        ax3.legend()
 
-        st.pyplot(fig)
-
-        # Save plot for export
-        img_buffer = BytesIO()
-        fig.savefig(img_buffer, format='PNG')
-        img_buffer.seek(0)
+        st.pyplot(fig3)
 
         # === EXCEL EXPORT ===
         df = pd.DataFrame(simulation_results)
         df.index.name = "Month"
 
         excel_buffer = BytesIO()
-        df.to_excel(excel_buffer, index=True, engine='openpyxl')
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name="Capital Development")
+            summary_df.to_excel(writer, sheet_name="Summary", index=False)
+
         excel_buffer.seek(0)
 
         st.download_button(
