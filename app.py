@@ -20,13 +20,33 @@ st.title("Allianz VitaVerde - Live Fund Simulator")
 st.subheader("Real-time Data, Scenario Analysis, and Tax Simulation")
 st.markdown("---")
 
-# === FUND DATA ===
+# === FUND DATA (Optimized, Public Tickers) ===
 funds = {
-    "Allianz Strategy Select 30 (EUR)": {"ticker": "0P0000Q8MA.IR", "type": "Mixed"},
-    "Allianz Strategy Select 50 (EUR)": {"ticker": "0P0000Q8MB.IR", "type": "Mixed"},
-    "Allianz Strategy Select 75 (EUR)": {"ticker": "0P0000Q8MC.IR", "type": "Equity"},
-    "iShares Euro Govt Bond 15-30yr": {"ticker": "IBGL.DE", "type": "Bond"},
-    "MSCI World ETF": {"ticker": "URTH", "type": "Equity"},
+    "iShares MSCI World ETF": {
+        "ticker": "URTH",
+        "type": "Equity",
+        "description": "Global developed markets equity exposure"
+    },
+    "SPDR S&P 500 ETF Trust": {
+        "ticker": "SPY",
+        "type": "Equity",
+        "description": "Large-cap US equity exposure"
+    },
+    "iShares Euro Govt Bond 15-30yr": {
+        "ticker": "IBGL.DE",
+        "type": "Bond",
+        "description": "Eurozone government bonds with 15-30 years maturity"
+    },
+    "Vanguard FTSE All-World UCITS ETF": {
+        "ticker": "VWRD.L",
+        "type": "Equity",
+        "description": "Global diversified equity exposure"
+    },
+    "Xtrackers MSCI Emerging Markets UCITS ETF": {
+        "ticker": "XMME.DE",
+        "type": "Equity",
+        "description": "Emerging markets equity exposure"
+    },
 }
 
 # === USER INPUTS ===
@@ -38,11 +58,37 @@ allocations = {}
 total_allocation = 0
 
 if selected_funds:
+    # Show fund descriptions
+    st.markdown("### Fund Details:")
+    for fund in selected_funds:
+        details = funds[fund]
+        st.markdown(f"**{fund}**")
+        st.markdown(f"- Ticker: {details['ticker']}")
+        st.markdown(f"- Type: {details['type']}")
+        st.markdown(f"- Description: {details['description']}")
+        st.markdown("---")
+
     st.markdown("#### Allocate your contributions among the selected funds:")
     for fund in selected_funds:
         allocation = st.number_input(f"Allocation for {fund} (%)", min_value=0, max_value=100, value=0, step=1)
         allocations[fund] = allocation
         total_allocation += allocation
+
+    # === ALLOCATION PIE CHART ===
+    if total_allocation > 0:
+        st.markdown("### Allocation Overview")
+        labels = []
+        sizes = []
+
+        for fund in selected_funds:
+            if allocations[fund] > 0:
+                labels.append(fund)
+                sizes.append(allocations[fund])
+
+        fig1, ax1 = plt.subplots()
+        ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+        ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+        st.pyplot(fig1)
 
 # === VALIDATION ===
 if total_allocation > 100:
