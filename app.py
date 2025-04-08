@@ -143,7 +143,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             volatility = monthly_returns.std()
             return mean_return, volatility
 
-        def run_simulation(mean_return, volatility):
+        def run_simulation(mean_return, volatility, scenario):
             total_capital = np.zeros(months)
             for fund in selected_funds:
                 allocation_pct = allocations[fund] / 100
@@ -157,7 +157,16 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 fund_capital = 0
                 for month in range(months):
                     monthly_contribution = contribution * allocation_pct
-                    fund_capital *= (1 + monthly_returns[min(month, len(monthly_returns) - 1)])
+
+                    # Adjust monthly return based on scenario
+                    if scenario == "Optimistic":
+                        adjusted_return = mean_return + volatility
+                    elif scenario == "Pessimistic":
+                        adjusted_return = mean_return - volatility
+                    else:
+                        adjusted_return = mean_return
+
+                    fund_capital *= (1 + adjusted_return)
                     fund_capital += monthly_contribution
                     total_capital[month] += fund_capital
 
@@ -172,15 +181,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 mean_returns.append(mean_return)
                 volatilities.append(volatility)
 
-            # Szenarien basierend auf historischen Daten
-            if scenario == "Optimistic":
-                adjusted_returns = [mean + vol for mean, vol in zip(mean_returns, volatilities)]
-            elif scenario == "Pessimistic":
-                adjusted_returns = [mean - vol for mean, vol in zip(mean_returns, volatilities)]
-            else:
-                adjusted_returns = mean_returns
-
-            simulation_results[scenario] = run_simulation(np.mean(adjusted_returns), np.mean(volatilities))
+            simulation_results[scenario] = run_simulation(np.mean(mean_returns), np.mean(volatilities), scenario)
 
         result_summary = []
 
