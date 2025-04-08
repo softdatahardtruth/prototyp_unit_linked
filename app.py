@@ -7,6 +7,7 @@ from fpdf import FPDF
 from datetime import datetime
 from io import BytesIO
 import tempfile
+import requests
 
 class PDF(FPDF):
     def header(self):
@@ -70,6 +71,10 @@ insurance_cost_rate = st.sidebar.slider("Annual Insurance Cost (% of fund value)
 setup_cost_rate = st.sidebar.slider("Initial Setup Cost (% of contributions)", 0.0, 5.0, 2.0, step=0.1) / 100
 death_benefit_option = st.sidebar.checkbox("Include Death Benefit Guarantee (Paid-in Capital)", value=True)
 
+# Beitragsgarantie Optionen
+guarantee_options = st.sidebar.selectbox("Contribution Guarantee", ["None", "25%", "50%", "75%"])
+guarantee_rate = {"None": 0, "25%": 0.25, "50%": 0.50, "75%": 0.75}[guarantee_options]
+
 # Optional: Advisor and Client Name for PDF
 advisor_name = st.sidebar.text_input("Advisor Name (optional)", value="Advisor")
 client_name = st.sidebar.text_input("Client Name (optional)", value="Client")
@@ -131,7 +136,14 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     else:
         simulation_results = {"Optimistic": [], "Expected": [], "Pessimistic": []}
 
-        def run_simulation(expected_annual_return):
+        def calculate_expected_returns(data):
+            price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
+            monthly_returns = data[price_column].pct_change().dropna()
+            mean_return = monthly_returns.mean()
+            volatility = monthly_returns.std()
+            return mean_return, volatility
+
+        def run_simulation(mean_return, volatility):
             total_capital = np.zeros(months)
             for fund in selected_funds:
                 allocation_pct = allocations[fund] / 100
@@ -151,11 +163,24 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
 
             return total_capital
 
-        # Beispiel für erwartete jährliche Renditen
-        expected_annual_returns = {"Optimistic": 0.08, "Expected": 0.05, "Pessimistic": 0.02}
+        for scenario in simulation_results.keys():
+            mean_returns = []
+            volatilities = []
+            for fund in selected_funds:
+                data = fund_data[fund]
+                mean_return, volatility = calculate_expected_returns(data)
+                mean_returns.append(mean_return)
+                volatilities.append(volatility)
 
-        for scenario in expected_annual_returns.keys():
-            simulation_results[scenario] = run_simulation(expected_annual_returns[scenario])
+            # Szenarien basierend auf historischen Daten
+            if scenario == "Optimistic":
+                adjusted_returns = [mean + vol for mean, vol in zip(mean_returns, volatilities)]
+            elif scenario == "Pessimistic":
+                adjusted_returns = [mean - vol for mean, vol in zip(mean_returns, volatilities)]
+            else:
+                adjusted_returns = mean_returns
+
+            simulation_results[scenario] = run_simulation(np.mean(adjusted_returns), np.mean(volatilities))
 
         result_summary = []
 
@@ -164,7 +189,11 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             gross_earnings = max(0, final_capital - paid_in)
             tax = gross_earnings * 0.26
             after_tax = final_capital - tax - setup_cost_total
+
+            # Anwendung der Todesfalloption und Beitragsgarantie
             death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
+            contribution_guarantee = paid_in * guarantee_rate
+            guaranteed_payout = max(death_benefit, contribution_guarantee)
 
             result_summary.append({
                 "Scenario": scenario,
@@ -174,7 +203,8 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 "Tax (€)": tax,
                 "Setup Cost (€)": setup_cost_total,
                 "After Tax (€)": after_tax,
-                "Death Benefit (€)": death_benefit
+                "Death Benefit (€)": death_benefit,
+                "Guaranteed Payout (€)": guaranteed_payout
             })
 
         summary_df = pd.DataFrame(result_summary)
@@ -196,10 +226,10 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         st.dataframe(summary_df_formatted)
 
         # === Bar Chart Comparison ===
-        st.markdown("### Scenario Comparison: After Tax & Death Benefit")
+        st.markdown("### Scenario Comparison: Guaranteed Payout")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
-        ax2.bar(summary_df["Scenario"], summary_df["Death Benefit (€)"], color=['green', 'blue', 'red'])
-        ax2.set_ylabel("Net Outcome (€)")
+        ax2.bar(summary_df["Scenario"], summary_df["Guaranteed Payout (€)"], color=['green', 'blue', 'red'])
+        ax2.set_ylabel("Guaranteed Payout (€)")
         ax2.set_title("Scenario Comparison")
         st.pyplot(fig2)
 
@@ -266,6 +296,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Death Benefit Guarantee: {'Yes' if death_benefit_option else 'No'}", ln=True)
+    pdf.cell(0, 10, f"Contribution Guarantee: {guarantee_options}", ln=True)
 
     # Pie Chart
     pdf.ln(10)
@@ -294,7 +325,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             f"{row['Scenario']}: "
             f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
             f"After Tax: {safe_format(row['After Tax (€)'])} | "
-            f"Death Benefit: {safe_format(row['Death Benefit (€)'])}"
+            f"Guaranteed Payout: {safe_format(row['Guaranteed Payout (€)'])}"
         )
 
     # Footer
