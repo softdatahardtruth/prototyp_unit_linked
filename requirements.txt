@@ -1,7 +1,7 @@
-streamlit==1.25.0
-yfinance==0.2.27
-pandas==2.0.3
-numpy==1.23.5
-matplotlib==3.7.3
-requests==2.31.0
-fpdf==1.7.2
+streamlit
+yfinance
+pandas
+numpy
+matplotlib
+requests
+fpdf
