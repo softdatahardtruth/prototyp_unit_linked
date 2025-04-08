@@ -6,3 +6,4 @@ matplotlib
 requests
 fpdf
 openpyxl
+requests
