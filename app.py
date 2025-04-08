@@ -164,9 +164,13 @@ if st.button("Run Simulation") and total_allocation == 100:
         df = pd.DataFrame(simulation_results)
         df.index.name = "Month"
 
+        excel_buffer = BytesIO()
+        df.to_excel(excel_buffer, index=True, engine='openpyxl')
+        excel_buffer.seek(0)
+
         st.download_button(
             label="Download results as Excel",
-            data=df.to_excel(index=True, engine='openpyxl'),
+            data=excel_buffer,
             file_name="simulation_results.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
