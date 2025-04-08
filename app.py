@@ -213,7 +213,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         # Helper function for safe formatting
         def safe_format(value):
             if isinstance(value, (int, float, np.number)) and pd.notnull(value):
-                return "EUR{:,.2f}".format(value)
+                return "{:,.2f}".format(value)
             else:
                 return "n/a"
 
