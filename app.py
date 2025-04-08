@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import requests
 from fpdf import FPDF
+from datetime import datetime
 
 # === CONFIG ===
 st.set_page_config(page_title="Allianz VitaVerde Simulator", layout="wide")
@@ -59,6 +60,10 @@ insurance_cost_rate = st.sidebar.slider("Annual Insurance Cost (% of fund value)
 setup_cost_rate = st.sidebar.slider("Initial Setup Cost (% of contributions)", 0.0, 5.0, 2.0, step=0.1) / 100
 death_benefit_option = st.sidebar.checkbox("Include Death Benefit Guarantee (Paid-in Capital)", value=True)
 
+# Optional: Advisor and Client Name for PDF
+advisor_name = st.sidebar.text_input("Advisor Name (optional)", value="Advisor")
+client_name = st.sidebar.text_input("Client Name (optional)", value="Client")
+
 allocations = {}
 total_allocation = 0
 
@@ -69,7 +74,6 @@ if selected_funds:
         allocations[fund] = allocation
         total_allocation += allocation
 
-# === VALIDATION ===
 if total_allocation > 100:
     st.sidebar.error("Total allocation exceeds 100%. Adjust your distribution.")
 elif total_allocation < 100 and selected_funds:
@@ -87,7 +91,6 @@ if selected_funds:
             st.markdown(f"- **Type:** {details['type']}")
             st.markdown(f"- {details['description']}")
 
-    # Allocation Pie Chart
     if total_allocation > 0:
         st.markdown("### Allocation Overview")
         labels = [fund for fund in selected_funds if allocations[fund] > 0]
@@ -106,7 +109,6 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     paid_in = contribution * months
     setup_cost_total = paid_in * setup_cost_rate
 
-    # Fetch fund data
     st.markdown("Fetching historical fund data...")
     fund_data = {}
     for fund in selected_funds:
@@ -120,7 +122,6 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         simulation_results_with = {"Optimistic": [], "Expected": [], "Pessimistic": []}
         simulation_results_without = {"Optimistic": [], "Expected": [], "Pessimistic": []}
 
-        # === SIMULATION FUNCTION ===
         def run_simulation(apply_insurance_cost):
             results = {}
             for scenario in ["Optimistic", "Expected", "Pessimistic"]:
@@ -146,21 +147,17 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                     for month in range(months):
                         monthly_contribution = contribution * allocation_pct
                         fund_capital *= (1 + returns[min(month, len(returns) - 1)])
-
                         if apply_insurance_cost:
                             fund_capital *= (1 - insurance_cost_rate / 12)
-
                         fund_capital += monthly_contribution
                         total_capital[month] += fund_capital
 
                 results[scenario] = total_capital
             return results
 
-        # Run both simulations
         simulation_results_with = run_simulation(apply_insurance_cost=True)
         simulation_results_without = run_simulation(apply_insurance_cost=False)
 
-        # Prepare summaries
         result_summary_with = []
         result_summary_without = []
 
@@ -186,7 +183,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             final_capital = capital[-1]
             gross_earnings = max(0, final_capital - paid_in)
             tax = gross_earnings * 0.26
-            after_tax = final_capital - tax  # no setup cost, no insurance
+            after_tax = final_capital - tax
 
             result_summary_without.append({
                 "Scenario": scenario,
@@ -206,7 +203,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         st.markdown("### Without Insurance Wrapper")
         st.dataframe(summary_df_without.style.format("{:,.2f}"))
         
-        # === Bar Chart Comparison ===
+                # === Bar Chart Comparison ===
         st.markdown("### Scenario Comparison: After Tax & Death Benefit")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
         ax2.bar(summary_df_with["Scenario"], summary_df_with["Death Benefit (€)"], color=['green', 'blue', 'red'])
@@ -256,79 +253,86 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
-        
-        # === PDF Export Robust Version ===
-st.markdown("### Download PDF Report")
+        # === PDF Export ===
+        st.markdown("### Download PDF Report")
 
-# Hilfsfunktion für sichere Formatierung
-def value(x):
-    return f"€{x:,.2f}" if isinstance(x, (int, float, np.number)) and pd.notnull(x) else "n/a"
+        # Helper function for safe formatting
+        def value(x):
+            return f"€{x:,.2f}" if isinstance(x, (int, float, np.number)) and pd.notnull(x) else "n/a"
 
-pdf = FPDF()
-pdf.add_page()
-pdf.set_font("Arial", "B", 16)
-pdf.cell(0, 10, "Allianz VitaVerde - Simulation Report", ln=True)
+        pdf = FPDF()
+        pdf.add_page()
 
-pdf.set_font("Arial", "", 12)
-pdf.cell(0, 10, f"Monthly Contribution: {value(contribution)}", ln=True)
-pdf.cell(0, 10, f"Investment Horizon: {duration} years", ln=True)
-pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
-pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
-pdf.cell(0, 10, f"Death Benefit Guarantee: {'Yes' if death_benefit_option else 'No'}", ln=True)
+        # Title and meta info
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "Allianz VitaVerde - Simulation Report", ln=True)
+        pdf.set_font("Arial", "I", 10)
+        pdf.cell(0, 10, f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", ln=True)
+        pdf.cell(0, 10, f"Advisor: {advisor_name} | Client: {client_name}", ln=True)
 
-pdf.ln(10)
-pdf.set_font("Arial", "B", 14)
-pdf.cell(0, 10, "Fund Allocation", ln=True)
+        # Parameters
+        pdf.set_font("Arial", "", 12)
+        pdf.ln(5)
+        pdf.cell(0, 10, f"Monthly Contribution: {value(contribution)}", ln=True)
+        pdf.cell(0, 10, f"Investment Horizon: {duration} years", ln=True)
+        pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
+        pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
+        pdf.cell(0, 10, f"Death Benefit Guarantee: {'Yes' if death_benefit_option else 'No'}", ln=True)
 
-# Add allocation pie chart
-pdf.image(buffer_pie, w=100)
+        # Pie Chart
+        pdf.ln(10)
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Fund Allocation", ln=True)
+        pdf.image(buffer_pie, w=100)
 
-pdf.ln(10)
-pdf.set_font("Arial", "B", 14)
-pdf.cell(0, 10, "Scenario Comparison", ln=True)
-pdf.image(buffer_chart, w=150)
+        # Bar Chart
+        pdf.ln(10)
+        pdf.cell(0, 10, "Scenario Comparison", ln=True)
+        pdf.image(buffer_chart, w=150)
 
-pdf.ln(10)
-pdf.set_font("Arial", "B", 14)
-pdf.cell(0, 10, "Summary With Insurance", ln=True)
-pdf.set_font("Arial", "", 10)
-for idx, row in summary_df_with.iterrows():
-    pdf.multi_cell(
-        0, 8,
-        f"{row['Scenario']}: "
-        f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
-        f"After Tax: {value(row['After Tax (€)'])} | "
-        f"Death Benefit: {value(row['Death Benefit (€)'])}"
-    )
+        # Summary with insurance
+        pdf.ln(10)
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Summary With Insurance", ln=True)
+        pdf.set_font("Arial", "", 10)
+        for idx, row in summary_df_with.iterrows():
+            pdf.multi_cell(
+                0, 8,
+                f"{row['Scenario']}: "
+                f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
+                f"After Tax: {value(row['After Tax (€)'])} | "
+                f"Death Benefit: {value(row['Death Benefit (€)'])}"
+            )
 
-pdf.ln(5)
-pdf.set_font("Arial", "B", 14)
-pdf.cell(0, 10, "Summary Without Insurance", ln=True)
-pdf.set_font("Arial", "", 10)
-for idx, row in summary_df_without.iterrows():
-    pdf.multi_cell(
-        0, 8,
-        f"{row['Scenario']}: "
-        f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
-        f"After Tax: {value(row['After Tax (€)'])}"
-    )
+        # Summary without insurance
+        pdf.ln(5)
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 10, "Summary Without Insurance", ln=True)
+        pdf.set_font("Arial", "", 10)
+        for idx, row in summary_df_without.iterrows():
+            pdf.multi_cell(
+                0, 8,
+                f"{row['Scenario']}: "
+                f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
+                f"After Tax: {value(row['After Tax (€)'])}"
+            )
 
-# Optional: Footer
-pdf.set_y(-30)
-pdf.set_font("Arial", "I", 8)
-pdf.cell(0, 10, "Generated by Allianz VitaVerde Simulator", 0, 0, 'C')
+        # Footer
+        pdf.set_y(-30)
+        pdf.set_font("Arial", "I", 8)
+        pdf.cell(0, 10, "Generated by Allianz VitaVerde Simulator", 0, 0, 'C')
 
-# Output PDF
-pdf_buffer = BytesIO()
-pdf.output(pdf_buffer)
-pdf_buffer.seek(0)
+        # Output PDF
+        pdf_buffer = BytesIO()
+        pdf.output(pdf_buffer)
+        pdf_buffer.seek(0)
 
-st.download_button(
-    label="Download PDF Report",
-    data=pdf_buffer,
-    file_name="simulation_report.pdf",
-    mime="application/pdf"
-)
+        st.download_button(
+            label="Download PDF Report",
+            data=pdf_buffer,
+            file_name=f"simulation_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+            mime="application/pdf"
+        )
 
 else:
     st.info("Please complete all inputs in the sidebar and click 'Run Simulation'.")
