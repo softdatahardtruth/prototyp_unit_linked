@@ -197,10 +197,30 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         summary_df_with = pd.DataFrame(result_summary_with)
         summary_df_without = pd.DataFrame(result_summary_without)
 
+        # Helper function for safe formatting
+        def safe_format(value):
+            if isinstance(value, (int, float, np.number)) and pd.notnull(value):
+                return "€{:,.2f}".format(value)
+            else:
+                return "n/a"
+
+        # Formatieren Sie die DataFrame vor der Anzeige
+        summary_df_with_formatted = summary_df_with.copy()
+        for col in summary_df_with_formatted.columns:
+            if summary_df_with_formatted[col].dtype in [np.float64, np.int64]:
+                summary_df_with_formatted[col] = summary_df_with_formatted[col].apply(safe_format)
+
         st.markdown("### With Insurance Wrapper")
-        st.dataframe(summary_df_with.style.format("{:,.2f}"))
+        st.dataframe(summary_df_with_formatted)
+
+        # Wiederholen Sie den Vorgang für summary_df_without
+        summary_df_without_formatted = summary_df_without.copy()
+        for col in summary_df_without_formatted.columns:
+            if summary_df_without_formatted[col].dtype in [np.float64, np.int64]:
+                summary_df_without_formatted[col] = summary_df_without_formatted[col].apply(safe_format)
+
         st.markdown("### Without Insurance Wrapper")
-        st.dataframe(summary_df_without.style.format("{:,.2f}"))
+        st.dataframe(summary_df_without_formatted)
         
         # === Bar Chart Comparison ===
         st.markdown("### Scenario Comparison: After Tax & Death Benefit")
@@ -255,12 +275,6 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     # === PDF Export ===
     st.markdown("### Download PDF Report")
 
-    def safe_format(value):
-        if isinstance(value, (int, float, np.number)) and pd.notnull(value):
-            return "€{:,.2f}".format(value)
-        else:
-            return "n/a"
-    
     pdf = FPDF()
     pdf.add_page()
 
