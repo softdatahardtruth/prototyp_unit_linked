@@ -7,6 +7,7 @@ from io import BytesIO
 import requests
 from fpdf import FPDF
 from datetime import datetime
+import tempfile
 
 # === CONFIG ===
 st.set_page_config(page_title="Allianz VitaVerde Simulator", layout="wide")
@@ -298,12 +299,16 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     pdf.ln(10)
     pdf.set_font("Arial", "B", 14)
     pdf.cell(0, 10, "Fund Allocation", ln=True)
-    pdf.image(buffer_pie, w=100)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        tmpfile.write(buffer_pie.getvalue())
+        pdf.image(tmpfile.name, w=100)
 
     # Bar Chart
     pdf.ln(10)
     pdf.cell(0, 10, "Scenario Comparison", ln=True)
-    pdf.image(buffer_chart, w=150)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+        tmpfile.write(buffer_chart.getvalue())
+        pdf.image(tmpfile.name, w=150)
 
     # Summary with insurance
     pdf.ln(10)
