@@ -7,6 +7,7 @@ from fpdf import FPDF
 from datetime import datetime
 from io import BytesIO
 import tempfile
+import requests
 
 class PDF(FPDF):
     def header(self):
@@ -135,7 +136,14 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     else:
         simulation_results = {"Optimistic": [], "Expected": [], "Pessimistic": []}
 
-        def run_simulation(expected_annual_return):
+        def calculate_expected_returns(data):
+            price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
+            monthly_returns = data[price_column].pct_change().dropna()
+            mean_return = monthly_returns.mean()
+            volatility = monthly_returns.std()
+            return mean_return, volatility
+
+        def run_simulation(mean_return, volatility):
             total_capital = np.zeros(months)
             for fund in selected_funds:
                 allocation_pct = allocations[fund] / 100
@@ -144,8 +152,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 if data.empty or allocation_pct == 0:
                     continue
 
-                price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
-                monthly_returns = data[price_column].pct_change().fillna(0).values
+                monthly_returns = data['Adj Close'].pct_change().fillna(0).values
                 fund_capital = 0
                 for month in range(months):
                     monthly_contribution = contribution * allocation_pct
@@ -155,11 +162,24 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
 
             return total_capital
 
-        # Beispiel für erwartete jährliche Renditen
-        expected_annual_returns = {"Optimistic": 0.08, "Expected": 0.05, "Pessimistic": 0.02}
+        for scenario in simulation_results.keys():
+            mean_returns = []
+            volatilities = []
+            for fund in selected_funds:
+                data = fund_data[fund]
+                mean_return, volatility = calculate_expected_returns(data)
+                mean_returns.append(mean_return)
+                volatilities.append(volatility)
 
-        for scenario in expected_annual_returns.keys():
-            simulation_results[scenario] = run_simulation(expected_annual_returns[scenario])
+            # Szenarien basierend auf historischen Daten
+            if scenario == "Optimistic":
+                adjusted_returns = [mean + vol for mean, vol in zip(mean_returns, volatilities)]
+            elif scenario == "Pessimistic":
+                adjusted_returns = [mean - vol for mean, vol in zip(mean_returns, volatilities)]
+            else:
+                adjusted_returns = mean_returns
+
+            simulation_results[scenario] = run_simulation(np.mean(adjusted_returns), np.mean(volatilities))
 
         result_summary = []
 
