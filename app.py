@@ -152,7 +152,8 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 if data.empty or allocation_pct == 0:
                     continue
 
-                monthly_returns = data['Adj Close'].pct_change().fillna(0).values
+                price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
+                monthly_returns = data[price_column].pct_change().fillna(0).values
                 fund_capital = 0
                 for month in range(months):
                     monthly_contribution = contribution * allocation_pct
