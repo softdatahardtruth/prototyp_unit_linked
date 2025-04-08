@@ -17,11 +17,11 @@ if response.status_code == 200:
     st.markdown(f'<div style="text-align: center;">{svg_content}</div>', unsafe_allow_html=True)
 
 # === TITLE ===
-st.title("Allianz VitaVerde - Interactive Fund Simulator")
-st.subheader("Real-time Data, Scenario Analysis, Tax Overview, and Allocation Insights")
+st.title("Allianz VitaVerde - Insurance & Investment Simulator")
+st.subheader("Real-time Data, Scenarios, Taxes & Insurance Benefits")
 st.markdown("---")
 
-# === FUND DATA (Stable public tickers + descriptions) ===
+# === FUND DATA ===
 funds = {
     "iShares MSCI World ETF": {
         "ticker": "URTH",
@@ -55,11 +55,16 @@ selected_funds = st.multiselect("Select your funds (up to 5)", list(funds.keys()
 contribution = st.number_input("Monthly Contribution (€)", min_value=10, value=100, step=10)
 duration = st.number_input("Investment Horizon (Years)", min_value=1, max_value=40, value=20, step=1)
 
+# Insurance Options
+st.markdown("### Insurance Options")
+insurance_cost_rate = st.slider("Annual Insurance Cost (% of fund value)", 0.0, 3.0, 1.0, step=0.1) / 100
+setup_cost_rate = st.slider("Initial Setup Cost (% of contributions)", 0.0, 5.0, 2.0, step=0.1) / 100
+death_benefit_option = st.checkbox("Include Death Benefit (Paid-in Capital Guarantee)", value=True)
+
 allocations = {}
 total_allocation = 0
 
 if selected_funds:
-    # Elegant fund details display in expander
     with st.expander("Fund Details", expanded=True):
         for fund in selected_funds:
             details = funds[fund]
@@ -109,12 +114,12 @@ if st.button("Run Simulation") and total_allocation == 100:
         data = data.dropna()
         fund_data[fund] = data
 
-    # Safety check: At least one fund has data
     if all(data.empty for data in fund_data.values()):
         st.error("No historical data found for the selected funds. Please select different funds.")
     else:
         months = duration * 12
         paid_in = contribution * months
+        setup_cost_total = paid_in * setup_cost_rate
 
         simulation_results = {
             "Optimistic": [],
@@ -122,7 +127,6 @@ if st.button("Run Simulation") and total_allocation == 100:
             "Pessimistic": [],
         }
 
-        # Run scenarios
         for scenario in simulation_results.keys():
             total_capital = np.zeros(months)
 
@@ -131,21 +135,20 @@ if st.button("Run Simulation") and total_allocation == 100:
                 data = fund_data[fund]
 
                 if data.empty:
-                    st.warning(f"No data found for {fund}. Skipping this fund.")
+                    st.warning(f"No data for {fund}. Skipping.")
                     continue
 
                 price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
                 if price_column not in data.columns:
-                    st.warning(f"No price data for {fund}. Skipping this fund.")
+                    st.warning(f"No price data for {fund}. Skipping.")
                     continue
 
                 returns = data[price_column].pct_change().fillna(0).values
                 if len(returns) == 0:
-                    st.warning(f"Insufficient return data for {fund}. Skipping this fund.")
+                    st.warning(f"Insufficient return data for {fund}. Skipping.")
                     continue
 
                 volatility = np.std(returns)
-                mean_return = np.mean(returns)
 
                 if scenario == "Optimistic":
                     returns = returns + volatility
@@ -156,43 +159,53 @@ if st.button("Run Simulation") and total_allocation == 100:
                 for month in range(months):
                     monthly_contribution = contribution * allocation_pct
                     fund_capital *= (1 + returns[min(month, len(returns) - 1)])
+
+                    # Apply insurance cost monthly
+                    fund_capital *= (1 - insurance_cost_rate / 12)
+
                     fund_capital += monthly_contribution
                     total_capital[month] += fund_capital
 
             simulation_results[scenario] = total_capital
 
         # === RESULTS OVERVIEW ===
-        st.markdown("### Simulation Results")
+        st.markdown("### Simulation Results (with Insurance Wrapper)")
 
         result_summary = []
         for scenario, capital in simulation_results.items():
             final = capital[-1]
-            earnings = max(0, final - paid_in)
+            gross_earnings = max(0, final - paid_in)
+            tax = gross_earnings * 0.26  # Standard capital gains tax
+            after_tax = final - tax - setup_cost_total
 
-            if all(funds[fund]["type"] == "Bond" for fund in selected_funds):
-                tax_rate = 0.125
-            else:
-                tax_rate = 0.26
+            # Death benefit logic
+            death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
 
-            tax = earnings * tax_rate
-            after_tax = final - tax
-
-            result_summary.append({"Scenario": scenario, "Final Capital (€)": final, "Tax (€)": tax, "After Tax (€)": after_tax})
+            result_summary.append({
+                "Scenario": scenario,
+                "Final Capital (€)": final,
+                "Setup Cost (€)": setup_cost_total,
+                "Tax (€)": tax,
+                "After Tax (€)": after_tax,
+                "Death Benefit (€)": death_benefit
+            })
 
             st.write(f"**{scenario} Scenario:**")
             st.write(f" - Final Capital before Tax: {final:,.2f} €")
+            st.write(f" - Setup Cost: {setup_cost_total:,.2f} €")
             st.write(f" - Tax: {tax:,.2f} €")
-            st.write(f" - Final Capital after Tax: {after_tax:,.2f} €")
+            st.write(f" - Final Capital after Tax and Costs: {after_tax:,.2f} €")
+            if death_benefit_option:
+                st.write(f" - Death Benefit Guarantee: {death_benefit:,.2f} €")
 
-        # Summary DataFrame for export and plots
         summary_df = pd.DataFrame(result_summary)
 
-        # === BAR CHART: Scenario Comparison ===
-        st.markdown("### Scenario Comparison")
+        # === SCENARIO COMPARISON CHART ===
+        st.markdown("### Scenario Comparison: Final Outcomes")
         fig2, ax2 = plt.subplots()
-        ax2.bar(summary_df["Scenario"], summary_df["After Tax (€)"], color=['green', 'blue', 'red'])
-        ax2.set_ylabel("After Tax Capital (€)")
-        ax2.set_title("Scenario Comparison: After Tax Results")
+        ax2.bar(summary_df["Scenario"], summary_df["Death Benefit (€)"], color=['green', 'blue', 'red'])
+        ax2.set_ylabel("After Tax & Death Benefit (€)")
+        ax2.set_title("Scenario Comparison with Insurance")
         st.pyplot(fig2)
 
         # === CAPITAL DEVELOPMENT CHART ===
