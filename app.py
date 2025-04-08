@@ -254,9 +254,12 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
 
     # === PDF Export ===
     st.markdown("### Download PDF Report")
-    # Helper function for safe formatting
-    def value(x):
-        return f"€{x:,.2f}" if isinstance(x, (int, float, np.number)) and pd.notnull(x) else "n/a"
+
+    def safe_format(value):
+        if isinstance(value, (int, float, np.number)) and pd.notnull(value):
+            return "€{:,.2f}".format(value)
+        else:
+            return "n/a"
     
     pdf = FPDF()
     pdf.add_page()
@@ -271,7 +274,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     # Parameters
     pdf.set_font("Arial", "", 12)
     pdf.ln(5)
-    pdf.cell(0, 10, f"Monthly Contribution: {value(contribution)}", ln=True)
+    pdf.cell(0, 10, f"Monthly Contribution: {safe_format(contribution)}", ln=True)
     pdf.cell(0, 10, f"Investment Horizon: {duration} years", ln=True)
     pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
@@ -298,9 +301,9 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         pdf.multi_cell(
             0, 8,
             f"{row['Scenario']}: "
-            f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
-            f"After Tax: {value(row['After Tax (€)'])} | "
-            f"Death Benefit: {value(row['Death Benefit (€)'])}"
+            f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
+            f"After Tax: {safe_format(row['After Tax (€)'])} | "
+            f"Death Benefit: {safe_format(row['Death Benefit (€)'])}"
         )
 
     # Summary without insurance
@@ -313,8 +316,8 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         pdf.multi_cell(
             0, 8,
             f"{row['Scenario']}: "
-            f"Paid-in: {value(row['Paid-in Capital (€)'])} | "
-            f"After Tax: {value(row['After Tax (€)'])}"
+            f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
+            f"After Tax: {safe_format(row['After Tax (€)'])}"
         )
 
     # Footer
