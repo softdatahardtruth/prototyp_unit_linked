@@ -7,7 +7,6 @@ from fpdf import FPDF
 from datetime import datetime
 from io import BytesIO
 import tempfile
-import requests  # Import der requests-Bibliothek
 
 class PDF(FPDF):
     def header(self):
@@ -70,10 +69,6 @@ duration = st.sidebar.number_input("Investment Horizon (Years)", min_value=1, ma
 insurance_cost_rate = st.sidebar.slider("Annual Insurance Cost (% of fund value)", 0.0, 3.0, 1.0, step=0.1) / 100
 setup_cost_rate = st.sidebar.slider("Initial Setup Cost (% of contributions)", 0.0, 5.0, 2.0, step=0.1) / 100
 death_benefit_option = st.sidebar.checkbox("Include Death Benefit Guarantee (Paid-in Capital)", value=True)
-
-# Beitragsgarantie Optionen
-guarantee_options = st.sidebar.selectbox("Contribution Guarantee", ["None", "25%", "50%", "75%"])
-guarantee_rate = {"None": 0, "25%": 0.25, "50%": 0.50, "75%": 0.75}[guarantee_options]
 
 # Optional: Advisor and Client Name for PDF
 advisor_name = st.sidebar.text_input("Advisor Name (optional)", value="Advisor")
@@ -169,11 +164,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             gross_earnings = max(0, final_capital - paid_in)
             tax = gross_earnings * 0.26
             after_tax = final_capital - tax - setup_cost_total
-
-            # Anwendung der Todesfalloption und Beitragsgarantie
             death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
-            contribution_guarantee = paid_in * guarantee_rate
-            guaranteed_payout = max(death_benefit, contribution_guarantee)
 
             result_summary.append({
                 "Scenario": scenario,
@@ -183,8 +174,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
                 "Tax (€)": tax,
                 "Setup Cost (€)": setup_cost_total,
                 "After Tax (€)": after_tax,
-                "Death Benefit (€)": death_benefit,
-                "Guaranteed Payout (€)": guaranteed_payout
+                "Death Benefit (€)": death_benefit
             })
 
         summary_df = pd.DataFrame(result_summary)
@@ -206,10 +196,10 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         st.dataframe(summary_df_formatted)
 
         # === Bar Chart Comparison ===
-        st.markdown("### Scenario Comparison: Guaranteed Payout")
+        st.markdown("### Scenario Comparison: After Tax & Death Benefit")
         fig2, ax2 = plt.subplots(figsize=(6, 4))
-        ax2.bar(summary_df["Scenario"], summary_df["Guaranteed Payout (€)"], color=['green', 'blue', 'red'])
-        ax2.set_ylabel("Guaranteed Payout (€)")
+        ax2.bar(summary_df["Scenario"], summary_df["Death Benefit (€)"], color=['green', 'blue', 'red'])
+        ax2.set_ylabel("Net Outcome (€)")
         ax2.set_title("Scenario Comparison")
         st.pyplot(fig2)
 
@@ -276,7 +266,6 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Death Benefit Guarantee: {'Yes' if death_benefit_option else 'No'}", ln=True)
-    pdf.cell(0, 10, f"Contribution Guarantee: {guarantee_options}", ln=True)
 
     # Pie Chart
     pdf.ln(10)
@@ -305,7 +294,7 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
             f"{row['Scenario']}: "
             f"Paid-in: {safe_format(row['Paid-in Capital (€)'])} | "
             f"After Tax: {safe_format(row['After Tax (€)'])} | "
-            f"Guaranteed Payout: {safe_format(row['Guaranteed Payout (€)'])}"
+            f"Death Benefit: {safe_format(row['Death Benefit (€)'])}"
         )
 
     # Footer
