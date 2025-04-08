@@ -5,13 +5,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from io import BytesIO
 import requests
-from fpdf import FPDF, TTFontFile
+from fpdf import FPDF
 from datetime import datetime
 import tempfile
-import os
 
-# Pfad zu Ihrem TrueType-Font
-ttf_font_path = "/path/to/your/DejaVuSans.ttf"
+# URL zu Ihrem TrueType-Font auf GitHub
+font_url = "https://github.com/softdatahardtruth/prototyp_unit_linked/raw/main/DejaVuSans.ttf"
+
+# Temporären Speicherort für den Font
+ttf_font_path = "/tmp/DejaVuSans.ttf"
+
+# Font herunterladen
+response = requests.get(font_url)
+with open(ttf_font_path, "wb") as f:
+    f.write(response.content)
 
 class PDF(FPDF):
     def header(self):
