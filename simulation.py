@@ -62,14 +62,7 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
         if data.empty or allocation_pct == 0:
             continue
 
-        mean_return_series, volatility_series = calculate_expected_returns(data)
-        
-        # Extrahieren Sie skalare Werte
-        mean_return = mean_return_series.iloc[0] if isinstance(mean_return_series, pd.Series) else mean_return_series
-        volatility = volatility_series.iloc[0] if isinstance(volatility_series, pd.Series) else volatility_series
-
-        # Debugging-Ausgabe für mean_return und volatility
-        st.write(f"Fund: {fund}, Mean Return: {mean_return}, Volatility: {volatility}")
+        mean_return, volatility = calculate_expected_returns(data)
 
         fund_capital = 0
         for month in range(months):
@@ -84,8 +77,14 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             else:
                 adjusted_return = weighted_average_return
 
+            # Debugging-Ausgabe für adjusted_return
+            st.write(f"Month: {month}, Adjusted Return: {adjusted_return}")
+
             fund_capital *= (1 + adjusted_return)
             fund_capital += monthly_contribution
+
+            # Debugging-Ausgabe für fund_capital vor der Addition
+            st.write(f"Month: {month}, Fund Capital before addition: {fund_capital}")
 
             # Sicherstellen, dass fund_capital ein skalarer Wert ist
             if isinstance(fund_capital, pd.Series):
