@@ -2,6 +2,7 @@ from fpdf import FPDF
 import pandas as pd
 from io import BytesIO
 import tempfile
+from datetime import datetime  # Fügen Sie diesen Import hinzu
 
 class PDF(FPDF):
     def header(self):
@@ -27,7 +28,7 @@ def generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffe
 
     pdf.set_font("Arial", "", 12)
     pdf.ln(5)
-    pdf.cell(0, 10, f"Monthly Contribution: {safe_format(contribution)}", ln=True)
+    pdf.cell(0, 10, f"Monthly Contribution: {contribution}", ln=True)
     pdf.cell(0, 10, f"Investment Horizon: {duration} years", ln=True)
     pdf.cell(0, 10, f"Insurance Cost: {insurance_cost_rate * 100:.2f}%", ln=True)
     pdf.cell(0, 10, f"Setup Cost: {setup_cost_rate * 100:.2f}%", ln=True)
@@ -56,9 +57,9 @@ def generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffe
         pdf.multi_cell(
             0, 8,
             f"{row['Scenario']}: "
-            f"Paid-in: {safe_format(row['Paid-in Capital (EUR)'])} | "
-            f"After Tax: {safe_format(row['After Tax (EUR)'])} | "
-            f"Guaranteed Payout: {safe_format(row['Guaranteed Payout (EUR)'])}"
+            f"Paid-in: {row['Paid-in Capital (EUR)']} | "
+            f"After Tax: {row['After Tax (EUR)']} | "
+            f"Guaranteed Payout: {row['Guaranteed Payout (EUR)']}"
         )
 
     pdf.set_y(-30)
