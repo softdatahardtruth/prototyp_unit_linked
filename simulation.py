@@ -10,6 +10,8 @@ def calculate_expected_returns(data):
 
 def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario):
     total_capital = np.zeros(months)
+    total_contributions = np.zeros(months)
+
     for fund in selected_funds:
         allocation_pct = allocations[fund] / 100
         data = fund_data[fund]
@@ -22,6 +24,7 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
         fund_capital = 0
         for month in range(months):
             monthly_contribution = contribution * allocation_pct
+            total_contributions[month] += monthly_contribution
 
             # Adjust monthly return based on scenario
             if scenario == "Optimistic":
@@ -35,13 +38,24 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             fund_capital += monthly_contribution
             total_capital[month] += fund_capital
 
-    return total_capital
+    return total_capital, total_contributions
 
-def perform_simulation(selected_funds, allocations, fund_data, contribution, duration):
+def perform_simulation(selected_funds, allocations, fund_data, contribution, duration, tax_rate):
     months = duration * 12
-    simulation_results = {"Optimistic": [], "Expected": [], "Pessimistic": []}
+    simulation_results = {"Optimistic": {}, "Expected": {}, "Pessimistic": {}}
     
     for scenario in simulation_results.keys():
-        simulation_results[scenario] = run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario)
+        total_capital, total_contributions = run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario)
+        
+        end_capital = total_capital[-1]
+        total_contribution = total_contributions.sum()
+        profit = end_capital - total_contribution
+        tax = profit * tax_rate
+        
+        simulation_results[scenario] = {
+            "Endkapital": end_capital,
+            "Gewinn": profit,
+            "Steuer": tax
+        }
 
     return simulation_results
