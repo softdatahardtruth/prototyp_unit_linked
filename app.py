@@ -1,10 +1,38 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 from config import initialize_page
 from data_fetching import fetch_logo, display_fund_details, fetch_fund_data, funds
 from simulation import perform_simulation
 from report_generation import generate_pdf_report, generate_excel_report
 from guarantee_calculation import calculate_option_prices, plot_guarantee_vs_cost, plot_sensitivity_volatility, plot_sensitivity_time
+
+def create_summary(simulation_results, paid_in, setup_cost_total, death_benefit_option, guarantee_rate):
+    result_summary = []
+    for scenario, capital in simulation_results.items():
+        final_capital = capital[-1]
+        gross_earnings = max(0, final_capital - paid_in)
+        tax = gross_earnings * 0.26
+        after_tax = final_capital - tax - setup_cost_total
+
+        death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
+        contribution_guarantee = paid_in * guarantee_rate
+        guaranteed_payout = max(death_benefit, contribution_guarantee)
+
+        result_summary.append({
+            "Scenario": scenario,
+            "Paid-in Capital (EUR)": paid_in,
+            "Final Capital (EUR)": final_capital,
+            "Earnings (EUR)": gross_earnings,
+            "Tax (EUR)": tax,
+            "Setup Cost (EUR)": setup_cost_total,
+            "After Tax (EUR)": after_tax,
+            "Death Benefit (EUR)": death_benefit,
+            "Guaranteed Payout (EUR)": guaranteed_payout
+        })
+
+    summary_df = pd.DataFrame(result_summary)
+    return summary_df
 
 initialize_page()
 fetch_logo()
@@ -45,7 +73,10 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     fund_data = fetch_fund_data(selected_funds)
     simulation_results = perform_simulation(selected_funds, allocations, fund_data, contribution, duration)
     
-    # Generate and display reports...
+    paid_in = contribution * duration * 12
+    setup_cost_total = paid_in * setup_cost_rate
+    summary_df = create_summary(simulation_results, paid_in, setup_cost_total, death_benefit_option, guarantee_rate)
+
     pdf_buffer = generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffer_chart)
     excel_buffer = generate_excel_report(simulation_results, summary_df)
 
@@ -63,7 +94,6 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-    # Guarantee calculations
     initial_investment = contribution * duration * 12
     time_horizon = duration
     risk_free_rate = 0.02
