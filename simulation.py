@@ -14,6 +14,8 @@ def calculate_weighted_average_return(selected_funds, allocations, fund_data):
     total_weighted_return = 0
     total_allocation = sum(allocations.values())
     
+    st.write(f"Total Allocation: {total_allocation}")
+
     for fund in selected_funds:
         allocation_pct = allocations[fund] / total_allocation
         data = fund_data[fund]
@@ -22,8 +24,13 @@ def calculate_weighted_average_return(selected_funds, allocations, fund_data):
             continue
         
         mean_return, _ = calculate_expected_returns(data)
+        
+        # Debugging-Ausgabe für mean_return und allocation_pct
+        st.write(f"Fund: {fund}, Mean Return: {mean_return}, Allocation Percentage: {allocation_pct}")
+
         total_weighted_return += mean_return * allocation_pct
     
+    st.write(f"Total Weighted Return: {total_weighted_return}")
     return total_weighted_return
 
 def perform_simulation(selected_funds, allocations, fund_data, contribution, duration, tax_rate):
