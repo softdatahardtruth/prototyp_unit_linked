@@ -107,6 +107,10 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
 
     excel_buffer = generate_excel_report(simulation_results, summary_df)
 
+    # Anzeige der Simulation Summary als Tabelle
+    st.subheader("Simulation Summary")
+    st.dataframe(summary_df)
+    
     st.download_button(
         label="Download PDF Report",
         data=pdf_buffer,
