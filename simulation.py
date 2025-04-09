@@ -86,5 +86,6 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             total_capital[month] += fund_capital
 
     return total_capital, total_contributions
-    print(f"Month: {month}, Fund: {fund}, Fund Capital: {fund_capital}, Total Capital: {total_capital[month]}")
+    
+ st.write(f"Month: {month}, Fund: {fund}, Fund Capital: {fund_capital}, Total Capital: {total_capital[month]}")
 
