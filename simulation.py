@@ -78,6 +78,10 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
 
             fund_capital *= (1 + adjusted_return)
             fund_capital += monthly_contribution
-            total_capital[month] += float(fund_capital)  # Konvertieren Sie fund_capital zu einem skalaren Wert
+            # Sicherstellen, dass fund_capital ein skalarer Wert ist
+            if isinstance(fund_capital, pd.Series):
+                fund_capital = fund_capital.iloc[0]  # Extrahieren Sie den Wert aus der Serie
+
+            total_capital[month] += fund_capital
 
     return total_capital, total_contributions
