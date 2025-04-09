@@ -10,9 +10,6 @@ def calculate_expected_returns(data):
     volatility = monthly_returns.std()
     return mean_return, volatility
 
-
-tax_rate = 0.26
-
 def calculate_weighted_average_return(selected_funds, allocations, fund_data):
     total_weighted_return = 0
     total_allocation = sum(allocations.values())
@@ -28,7 +25,7 @@ def calculate_weighted_average_return(selected_funds, allocations, fund_data):
         total_weighted_return += mean_return * allocation_pct
     
     return total_weighted_return
-    
+
 def perform_simulation(selected_funds, allocations, fund_data, contribution, duration, tax_rate):
     months = duration * 12
     simulation_results = {"Optimistic": {}, "Expected": {}, "Pessimistic": {}}
@@ -51,18 +48,7 @@ def perform_simulation(selected_funds, allocations, fund_data, contribution, dur
 
     return simulation_results
 
-def calculate_weighted_average_return(data):
-    # Beispiel für eine Berechnung des gewichteten Durchschnitts
-    returns = data['Close'].pct_change().dropna()
-    weighted_average_return = returns.mean()  # Beispielberechnung
-
-    # Debugging-Ausgabe für die Berechnung in Streamlit
-    st.write(f"Returns: {returns}")
-    st.write(f"Weighted Average Return: {weighted_average_return}")
-
-    return weighted_average_return
-
-def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario):
+def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario, weighted_average_return):
     total_capital = np.zeros(months)
     total_contributions = np.zeros(months)
 
@@ -74,7 +60,6 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             continue
 
         mean_return, volatility = calculate_expected_returns(data)
-        weighted_average_return = calculate_weighted_average_return(data)
 
         # Debugging-Ausgabe für weighted_average_return und volatility in Streamlit
         st.write(f"Fund: {fund}, Weighted Average Return: {weighted_average_return}, Volatility: {volatility}")
