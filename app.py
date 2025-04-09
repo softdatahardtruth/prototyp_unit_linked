@@ -98,7 +98,12 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     fig2.savefig(buffer_chart, format='PNG')
     buffer_chart.seek(0)
 
-    pdf_buffer = generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffer_chart)
+    
+    pdf_buffer = generate_pdf_report(
+    summary_df, advisor_name, client_name, buffer_pie, buffer_chart,
+    contribution, duration, insurance_cost_rate, setup_cost_rate, death_benefit_option, guarantee_options
+    )
+
     excel_buffer = generate_excel_report(simulation_results, summary_df)
 
     st.download_button(
