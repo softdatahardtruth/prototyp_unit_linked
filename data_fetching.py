@@ -2,6 +2,7 @@
 import yfinance as yf
 import streamlit as st
 import requests
+import matplotlib.pyplot as plt  
 
 funds = {
     "iShares MSCI World ETF": {
