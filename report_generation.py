@@ -71,3 +71,12 @@ def generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffe
     pdf.output(pdf_buffer)
     pdf_buffer.seek(0)
     return pdf_buffer
+
+def generate_excel_report(simulation_results, summary_df):
+    excel_buffer = BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+        pd.DataFrame(simulation_results).to_excel(writer, sheet_name="Simulation Results")
+        summary_df.to_excel(writer, sheet_name="Summary", index=False)
+
+    excel_buffer.seek(0)
+    return excel_buffer
