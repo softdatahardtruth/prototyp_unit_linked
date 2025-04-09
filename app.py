@@ -1,8 +1,10 @@
 import streamlit as st
+import numpy as np
 from config import initialize_page
 from data_fetching import fetch_logo, display_fund_details, fetch_fund_data
 from simulation import perform_simulation
 from report_generation import generate_pdf_report, generate_excel_report
+from guarantee_calculation import calculate_option_prices, plot_guarantee_vs_cost, plot_sensitivity_volatility, plot_sensitivity_time
 
 initialize_page()
 fetch_logo()
@@ -60,5 +62,18 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
         file_name="simulation_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+    # Guarantee calculations
+    initial_investment = contribution * duration * 12
+    time_horizon = duration
+    risk_free_rate = 0.02
+    volatility = 0.15
+    guarantee_levels = np.linspace(0, 1, 21)  # 0% bis 100% in 5%-Schritten
+
+    option_prices = calculate_option_prices(initial_investment, time_horizon, risk_free_rate, volatility, guarantee_levels)
+    plot_guarantee_vs_cost(guarantee_levels, option_prices)
+    plot_sensitivity_volatility(initial_investment, time_horizon, risk_free_rate, guarantee_levels)
+    plot_sensitivity_time(initial_investment, risk_free_rate, volatility, guarantee_levels)
+
 else:
     st.info("Please complete all inputs in the sidebar and click 'Run Simulation'.")
