@@ -53,9 +53,9 @@ def perform_simulation(selected_funds, allocations, fund_data, contribution, dur
         tax = profit * tax_rate
         
         simulation_results[scenario] = {
-            "Endkapital": end_capital,
-            "Gewinn": profit,
-            "Steuer": tax
+            "Final Capital": end_capital,
+            "Earnings": profit,
+            "Tax": tax
         }
 
     return simulation_results
