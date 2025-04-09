@@ -66,6 +66,9 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
 
         # Debugging-Ausgabe für weighted_average_return und volatility
         st.write(f"Fund: {fund}, Weighted Average Return: {weighted_average_return}, Volatility: {volatility}")
+        
+        # Überprüfen Sie die Quelle des weighted_average_return
+        st.write(f"Source Data for Weighted Average Return: {data}")
 
         fund_capital = 0
         for month in range(months):
