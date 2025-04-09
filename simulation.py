@@ -63,6 +63,9 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             continue
 
         mean_return, volatility = calculate_expected_returns(data)
+        
+        # Debugging-Ausgabe für mean_return und volatility
+        st.write(f"Fund: {fund}, Mean Return: {mean_return}, Volatility: {volatility}")
 
         fund_capital = 0
         for month in range(months):
@@ -90,3 +93,4 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             st.write(f"Month: {month}, Fund: {fund}, Fund Capital: {fund_capital}, Total Capital: {total_capital[month]}")
 
     return total_capital, total_contributions
+
