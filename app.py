@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt  # Import von matplotlib.pyplot
 from io import BytesIO
 from config import initialize_page
 from data_fetching import fetch_logo, display_fund_details, fetch_fund_data, funds
