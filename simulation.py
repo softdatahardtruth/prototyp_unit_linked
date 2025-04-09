@@ -64,6 +64,9 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
 
         mean_return, volatility = calculate_expected_returns(data)
 
+        # Debugging-Ausgabe für weighted_average_return und volatility
+        st.write(f"Fund: {fund}, Weighted Average Return: {weighted_average_return}, Volatility: {volatility}")
+
         fund_capital = 0
         for month in range(months):
             monthly_contribution = contribution * allocation_pct
