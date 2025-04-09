@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 from config import initialize_page
-from data_fetching import fetch_logo, display_fund_details, fetch_fund_data
+from data_fetching import fetch_logo, display_fund_details, fetch_fund_data, funds
 from simulation import perform_simulation
 from report_generation import generate_pdf_report, generate_excel_report
 from guarantee_calculation import calculate_option_prices, plot_guarantee_vs_cost, plot_sensitivity_volatility, plot_sensitivity_time
