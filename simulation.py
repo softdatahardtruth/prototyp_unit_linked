@@ -78,6 +78,6 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
 
             fund_capital *= (1 + adjusted_return)
             fund_capital += monthly_contribution
-            total_capital[month] += fund_capital
+            total_capital[month] += float(fund_capital)  # Konvertieren Sie fund_capital zu einem skalaren Wert
 
     return total_capital, total_contributions
