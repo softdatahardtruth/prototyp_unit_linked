@@ -10,12 +10,14 @@ from simulation import perform_simulation
 from report_generation import generate_pdf_report, generate_excel_report
 from guarantee_calculation import calculate_option_prices, plot_guarantee_vs_cost, plot_sensitivity_volatility, plot_sensitivity_time
 
+tax_rate = 0.26
+
 def create_summary(simulation_results, paid_in, setup_cost_total, death_benefit_option, guarantee_rate):
     result_summary = []
     for scenario, capital in simulation_results.items():
         final_capital = capital[-1]
         gross_earnings = max(0, final_capital - paid_in)
-        tax = gross_earnings * 0.26
+        tax = calculate_tax(gross_earnings, tax_rate)
         after_tax = final_capital - tax - setup_cost_total
 
         death_benefit = max(paid_in, after_tax) if death_benefit_option else after_tax
