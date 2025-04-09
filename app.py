@@ -107,12 +107,12 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     excel_buffer = generate_excel_report(simulation_results, summary_df)
 
     st.download_button(
-    label="Download PDF Report",
-    data=pdf_buffer,
-    file_name=f"simulation_report_{datetime.now().strftime('%Y%m%d')}.pdf",  # Verwenden Sie datetime hier
-    mime="application/pdf"
-)
-    
+        label="Download PDF Report",
+        data=pdf_buffer,
+        file_name=f"simulation_report_{datetime.now().strftime('%Y%m%d')}.pdf",  # Verwenden Sie datetime hier
+        mime="application/pdf"
+    )
+
     st.download_button(
         label="Download results as Excel",
         data=excel_buffer,
