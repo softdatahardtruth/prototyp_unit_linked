@@ -51,7 +51,18 @@ def perform_simulation(selected_funds, allocations, fund_data, contribution, dur
 
     return simulation_results
 
-def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario, weighted_average_return):
+def calculate_weighted_average_return(data):
+    # Beispiel für eine Berechnung des gewichteten Durchschnitts
+    returns = data['Close'].pct_change().dropna()
+    weighted_average_return = returns.mean()  # Beispielberechnung
+
+    # Debugging-Ausgabe für die Berechnung in Streamlit
+    st.write(f"Returns: {returns}")
+    st.write(f"Weighted Average Return: {weighted_average_return}")
+
+    return weighted_average_return
+
+def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario):
     total_capital = np.zeros(months)
     total_contributions = np.zeros(months)
 
@@ -63,12 +74,10 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             continue
 
         mean_return, volatility = calculate_expected_returns(data)
+        weighted_average_return = calculate_weighted_average_return(data)
 
-        # Debugging-Ausgabe für weighted_average_return und volatility
+        # Debugging-Ausgabe für weighted_average_return und volatility in Streamlit
         st.write(f"Fund: {fund}, Weighted Average Return: {weighted_average_return}, Volatility: {volatility}")
-        
-        # Überprüfen Sie die Quelle des weighted_average_return
-        st.write(f"Source Data for Weighted Average Return: {data}")
 
         fund_capital = 0
         for month in range(months):
@@ -83,13 +92,13 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             else:
                 adjusted_return = weighted_average_return
 
-            # Debugging-Ausgabe für adjusted_return
+            # Debugging-Ausgabe für adjusted_return in Streamlit
             st.write(f"Month: {month}, Adjusted Return: {adjusted_return}")
 
             fund_capital *= (1 + adjusted_return)
             fund_capital += monthly_contribution
 
-            # Debugging-Ausgabe für fund_capital vor der Addition
+            # Debugging-Ausgabe für fund_capital vor der Addition in Streamlit
             st.write(f"Month: {month}, Fund Capital before addition: {fund_capital}")
 
             # Sicherstellen, dass fund_capital ein skalarer Wert ist
