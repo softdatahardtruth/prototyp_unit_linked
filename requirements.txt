@@ -3,7 +3,7 @@ yfinance
 pandas
 numpy
 matplotlib
-requests
 fpdf
-openpyxl
 requests
+scipy
+openpyxl
