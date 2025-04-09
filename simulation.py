@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from utils import calculate_tax
 
 def calculate_expected_returns(data):
     price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
@@ -39,7 +40,7 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             total_capital[month] += fund_capital
 
     return total_capital, total_contributions
-
+tax_rate = 0.26
 def perform_simulation(selected_funds, allocations, fund_data, contribution, duration, tax_rate):
     months = duration * 12
     simulation_results = {"Optimistic": {}, "Expected": {}, "Pessimistic": {}}
@@ -50,7 +51,7 @@ def perform_simulation(selected_funds, allocations, fund_data, contribution, dur
         end_capital = total_capital[-1]
         total_contribution = total_contributions.sum()
         profit = end_capital - total_contribution
-        tax = profit * tax_rate
+        tax = calculate_tax(profit, tax_rate)
         
         simulation_results[scenario] = {
             "Final Capital": end_capital,
