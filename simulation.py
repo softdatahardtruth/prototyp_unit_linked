@@ -3,12 +3,6 @@ import numpy as np
 import pandas as pd
 from utils import calculate_tax
 
-def calculate_expected_returns(data):
-    monthly_returns = data['Close'].pct_change().dropna()
-    mean_return = monthly_returns.mean()
-    volatility = monthly_returns.std()
-    return mean_return, volatility
-
 def calculate_weighted_average_return(selected_funds, allocations, fund_data, rebalancing_cost=0.00003):
     total_weighted_return = 0
     total_allocation = sum(allocations.values())
@@ -111,51 +105,3 @@ def perform_simulation(selected_funds, allocations, fund_data, contribution, dur
 
     return simulation_results
 
-def run_simulation(selected_funds, allocations, fund_data, contribution, months, scenario, weighted_average_return):
-    total_capital = np.zeros(months)
-    total_contributions = np.zeros(months)
-
-    for fund in selected_funds:
-        allocation_pct = allocations[fund] / 100
-        data = fund_data[fund]
-
-        if data.empty or allocation_pct == 0:
-            continue
-
-        mean_return, volatility = calculate_expected_returns(data)
-
-        # Debugging-Ausgabe für weighted_average_return und volatility in Streamlit
-        #st.write(f"Fund: {fund}, Weighted Average Return: {weighted_average_return}, Volatility: {volatility}")
-
-        fund_capital = 0
-        for month in range(months):
-            monthly_contribution = contribution * allocation_pct
-            total_contributions[month] += monthly_contribution
-
-            # Adjust monthly return based on scenario
-            if scenario == "Optimistic":
-                adjusted_return = weighted_average_return + volatility
-            elif scenario == "Pessimistic":
-                adjusted_return = weighted_average_return - volatility
-            else:
-                adjusted_return = weighted_average_return
-
-            # Debugging-Ausgabe für adjusted_return in Streamlit
-            #st.write(f"Month: {month}, Adjusted Return: {adjusted_return}")
-
-            fund_capital *= (1 + adjusted_return)
-            fund_capital += monthly_contribution
-
-            # Debugging-Ausgabe für fund_capital vor der Addition in Streamlit
-            #st.write(f"Month: {month}, Fund Capital before addition: {fund_capital}")
-
-            # Sicherstellen, dass fund_capital ein skalarer Wert ist
-            if isinstance(fund_capital, pd.Series):
-                fund_capital = fund_capital.iloc[0]
-
-            total_capital[month] += fund_capital
-
-            # Debugging-Ausgabe in Streamlit
-            #st.write(f"Month: {month}, Fund: {fund}, Fund Capital: {fund_capital}, Total Capital: {total_capital[month]}")
-
-    return total_capital, total_contributions
