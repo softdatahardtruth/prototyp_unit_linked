@@ -1,15 +1,7 @@
 import yfinance as yf
 import streamlit as st
+import requests
 
-# === LOGO ===
-def fetch_logo():
-    logo_url = "https://raw.githubusercontent.com/softdatahardtruth/prototyp_unit_linked/main/allianz-logo.svg"
-    response = requests.get(logo_url)
-    if response.status_code == 200:
-        svg_content = response.text
-        st.markdown(f'<div style="text-align: center; margin-bottom: 20px;">{svg_content}</div>', unsafe_allow_html=True)
-
-# === FUND DATA ===
 funds = {
     "iShares MSCI World ETF": {
         "ticker": "URTH",
@@ -38,11 +30,14 @@ funds = {
     },
 }
 
-# === MAIN: DISPLAY FUND DETAILS ===
-def display_fund_details(selected_funds, allocations):
-    st.subheader("Fund Details")
+def fetch_logo():
+    logo_url = "https://raw.githubusercontent.com/softdatahardtruth/prototyp_unit_linked/main/allianz-logo.svg"
+    response = requests.get(logo_url)
+    if response.status_code == 200:
+        svg_content = response.text
+        st.markdown(f'<div style="text-align: center; margin-bottom: 20px;">{svg_content}</div>', unsafe_allow_html=True)
 
-if selected_funds:
+def display_fund_details(selected_funds, allocations):
     st.subheader("Fund Details")
     cols = st.columns(len(selected_funds))
     for idx, fund in enumerate(selected_funds):
@@ -53,7 +48,7 @@ if selected_funds:
             st.markdown(f"- **Type:** {details['type']}")
             st.markdown(f"- {details['description']}")
 
-    if total_allocation > 0:
+    if sum(allocations.values()) > 0:
         st.markdown("### Allocation Overview")
         labels = [fund for fund in selected_funds if allocations[fund] > 0]
         sizes = [allocations[fund] for fund in selected_funds if allocations[fund] > 0]
