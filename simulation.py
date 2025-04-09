@@ -62,8 +62,12 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
         if data.empty or allocation_pct == 0:
             continue
 
-        mean_return, volatility = calculate_expected_returns(data)
+        mean_return_series, volatility_series = calculate_expected_returns(data)
         
+        # Extrahieren Sie skalare Werte
+        mean_return = mean_return_series.iloc[0] if isinstance(mean_return_series, pd.Series) else mean_return_series
+        volatility = volatility_series.iloc[0] if isinstance(volatility_series, pd.Series) else volatility_series
+
         # Debugging-Ausgabe für mean_return und volatility
         st.write(f"Fund: {fund}, Mean Return: {mean_return}, Volatility: {volatility}")
 
@@ -93,4 +97,3 @@ def run_simulation(selected_funds, allocations, fund_data, contribution, months,
             st.write(f"Month: {month}, Fund: {fund}, Fund Capital: {fund_capital}, Total Capital: {total_capital[month]}")
 
     return total_capital, total_contributions
-
