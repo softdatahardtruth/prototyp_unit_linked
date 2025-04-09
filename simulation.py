@@ -4,8 +4,8 @@ import pandas as pd
 from utils import calculate_tax
 
 def calculate_expected_returns(data):
-    price_column = 'Adj Close' if 'Adj Close' in data.columns else 'Close'
-    monthly_returns = data[price_column].pct_change().dropna()
+    # Verwenden Sie immer den 'Close'-Preis
+    monthly_returns = data['Close'].pct_change().dropna()
     mean_return = monthly_returns.mean()
     volatility = monthly_returns.std()
     return mean_return, volatility
@@ -28,10 +28,15 @@ def calculate_weighted_average_return(selected_funds, allocations, fund_data):
         # Debugging-Ausgabe für mean_return und allocation_pct
         st.write(f"Fund: {fund}, Mean Return: {mean_return}, Allocation Percentage: {allocation_pct}")
 
-        total_weighted_return += mean_return * allocation_pct
+        # Überprüfen Sie die Multiplikation
+        weighted_return_contribution = mean_return * allocation_pct
+        st.write(f"Weighted Return Contribution: {weighted_return_contribution}")
+
+        total_weighted_return += weighted_return_contribution
     
     st.write(f"Total Weighted Return: {total_weighted_return}")
     return total_weighted_return
+
 
 def perform_simulation(selected_funds, allocations, fund_data, contribution, duration, tax_rate):
     months = duration * 12
