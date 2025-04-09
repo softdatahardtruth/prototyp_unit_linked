@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from io import BytesIO
 from config import initialize_page
 from data_fetching import fetch_logo, display_fund_details, fetch_fund_data, funds
 from simulation import perform_simulation
@@ -69,6 +70,16 @@ elif total_allocation < 100 and selected_funds:
 if selected_funds:
     display_fund_details(selected_funds, allocations)
 
+    # Save allocation pie chart to buffer
+    buffer_pie = BytesIO()
+    fig1, ax1 = plt.subplots(figsize=(4, 4))
+    labels = [fund for fund in selected_funds if allocations[fund] > 0]
+    sizes = [allocations[fund] for fund in selected_funds if allocations[fund] > 0]
+    ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+    ax1.axis('equal')
+    fig1.savefig(buffer_pie, format='PNG')
+    buffer_pie.seek(0)
+
 if st.sidebar.button("Run Simulation") and total_allocation == 100:
     fund_data = fetch_fund_data(selected_funds)
     simulation_results = perform_simulation(selected_funds, allocations, fund_data, contribution, duration)
@@ -76,6 +87,15 @@ if st.sidebar.button("Run Simulation") and total_allocation == 100:
     paid_in = contribution * duration * 12
     setup_cost_total = paid_in * setup_cost_rate
     summary_df = create_summary(simulation_results, paid_in, setup_cost_total, death_benefit_option, guarantee_rate)
+
+    # Save bar chart to buffer
+    buffer_chart = BytesIO()
+    fig2, ax2 = plt.subplots(figsize=(6, 4))
+    ax2.bar(summary_df["Scenario"], summary_df["Guaranteed Payout (EUR)"], color=['green', 'blue', 'red'])
+    ax2.set_ylabel("Guaranteed Payout (EUR)")
+    ax2.set_title("Scenario Comparison")
+    fig2.savefig(buffer_chart, format='PNG')
+    buffer_chart.seek(0)
 
     pdf_buffer = generate_pdf_report(summary_df, advisor_name, client_name, buffer_pie, buffer_chart)
     excel_buffer = generate_excel_report(simulation_results, summary_df)
